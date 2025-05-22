@@ -1,39 +1,32 @@
 <?php
 session_start();
 
-require_once '../config/Database.php';
-require_once '../classes/User.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../classes/User.php';
 
-// Here is the DB connection
 $db = new Database();
 $conn = $db->connect();
 $user = new User($conn);
 
-// Handle form submission are given below 
-$message = '';
+$error = '';
+$success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'];
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
+    $username = $_POST['username'];
+    $password = $_POST['password'];
 
-    if ($action === 'register') {
-        try {
-            $userId = $user->register($username, $password);
-            $message = "✅ Registered successfully. You can now log in.";
-        } catch (Exception $e) {
-            $message = "❌ Error: " . $e->getMessage();
-        }
-    }
-
-    if ($action === 'login') {
-        $login = $user->login($username, $password);
-        if ($login) {
-            $_SESSION['user'] = $login;
+    if (isset($_POST['login'])) {
+        if ($user->login($username, $password)) {
             header("Location: dashboard.php");
-            exit();
+            exit;
         } else {
-            $message = "❌ Invalid credentials.";
+            $error = 'Invalid username or password.';
+        }
+    } elseif (isset($_POST['register'])) {
+        if ($user->register($username, $password)) {
+            $success = 'Registration successful. You can now log in.';
+        } else {
+            $error = 'Registration failed. Username may already exist.';
         }
     }
 }
@@ -42,29 +35,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login / Register - Password Manager</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 30px; background: #f4f4f4; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-        h2 { text-align: center; }
-        input, button { width: 100%; padding: 10px; margin: 10px 0; }
-        .message { color: red; text-align: center; }
-    </style>
+    <title>Password Manager - Login/Register</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
-    <h2>Password Manager</h2>
-
-    <?php if ($message): ?>
-        <p class="message"><?= htmlspecialchars($message) ?></p>
-    <?php endif; ?>
-
-    <form method="post">
-        <input type="text" name="username" placeholder="Username" required />
-        <input type="password" name="password" placeholder="Password" required />
-        <button type="submit" name="action" value="login">🔐 Login</button>
-        <button type="submit" name="action" value="register">📝 Register</button>
-    </form>
-</div>
+    <div class="login-container">
+        <h1>Password Manager</h1>
+        <?php if ($error): ?>
+            <p class="error">❌ Error: <?= htmlspecialchars($error) ?></p>
+        <?php endif; ?>
+        <?php if ($success): ?>
+            <p class="success">✅ <?= htmlspecialchars($success) ?></p>
+        <?php endif; ?>
+        <form method="POST">
+            <label>Username</label>
+            <input type="text" name="username" required>
+            
+            <label>Password</label>
+            <input type="password" name="password" required>
+            
+            <button type="submit" name="login">🔐 Login</button>
+            <button type="submit" name="register">📝 Register</button>
+        </form>
+    </div>
 </body>
 </html>
